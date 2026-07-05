@@ -72,7 +72,18 @@
   function computeLayout(canvas, data) {
     const rect = canvas.getBoundingClientRect();
     const width = Math.max(rect.width, 280);
-    const height = canvas.getAttribute('height') ? parseInt(canvas.getAttribute('height'), 10) : 220;
+    // IMPORTANT: the canvas's logical (CSS) height must be read from a
+    // stable source that we control, NOT from canvas.getAttribute('height')
+    // or canvas.height — both of those get overwritten below with the
+    // DPI-scaled pixel size. Reading them back on a later re-render (mobile
+    // browsers fire many resize events while scrolling, as the address bar
+    // hides/shows) would re-multiply an already-scaled value by the DPR
+    // again and again, making the chart grow exponentially on every tick.
+    // We cache the original logical height once in a data-* attribute.
+    if (!canvas.dataset.logicalHeight) {
+      canvas.dataset.logicalHeight = canvas.getAttribute('height') || '220';
+    }
+    const height = parseInt(canvas.dataset.logicalHeight, 10) || 220;
     const maxTotal = Math.max(1, ...data.map(d => (d.up || 0) + (d.down || 0)));
     const step = niceStep(maxTotal);
     const niceMax = Math.max(step, Math.ceil(maxTotal / step) * step);
